@@ -1,0 +1,9 @@
+Package: com.ethanarbuckle.apollo-customapicredentials
+Name: Apollo-CustomApiCredentials
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: An awesome MobileSubstrate tweak!
+Maintainer: Ethan Arbuckle
+Author: Ethan Arbuckle
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000)
