@@ -12,7 +12,7 @@ sign out of all accounts in Apollo before installing
 	* Choose `Installed App`
 	* description: bs
 	* about url: bs
-	* redirect uri: `apollo://reddit/auth`
+	* redirect uri: `apollo://reddit-oauth`
 4. `create app`
 
 5. After creating the app you'll get a client identifier; it'll be a bunch of random characters. Put it in `Tweak.m`:
