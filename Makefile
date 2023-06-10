@@ -1,6 +1,7 @@
 ARCHS = arm64
-
-TARGET := iphone:clang:latest:7.0
+# Remove # if building for rootless
+#THEOS_PACKAGE_SCHEME=rootless
+TARGET := iphone:clang:13.7:15.0
 INSTALL_TARGET_PROCESSES = Apollo
 THEOS_LEAN_AND_MEAN = 1
 
