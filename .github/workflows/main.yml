@@ -1,0 +1,54 @@
+name: Build
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  make:
+    name: Build Tweak
+    runs-on: macos-latest
+    env:
+      THEOS: theos
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          submodules: true
+      - name: Install ldid and xz
+        run: |
+          brew install ldid xz
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode_14.2.app 
+      - name: Setup Theos
+        uses: actions/checkout@master
+        with:
+          repository: theos/theos
+          path: theos
+          submodules: recursive
+      - name: Ignore Parallel Building Notice  
+        run: |
+          echo 'THEOS_IGNORE_PARALLEL_BUILDING_NOTICE = yes' >> ~/.theosrc
+      - name: Download SDKs
+        run: |
+          curl -LO https://github.com/itsnebulalol/sdks/archive/main.zip
+          TMP=$(mktemp -d)
+          unzip main.zip -d $TMP
+          mv $TMP/sdks-main/*.sdk theos/sdks
+          rm -r main.zip $TMP
+      - name: Build Tweak
+        id: build
+        run: |
+         make clean package FINALPACKAGE=1
+         echo "package=$(ls -t packages | head -n1)" >> $GITHUB_OUTPUT
+      - name: Upload To GitHub Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./packages/*.deb
