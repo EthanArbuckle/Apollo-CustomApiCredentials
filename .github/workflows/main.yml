@@ -51,4 +51,5 @@ jobs:
       - name: Upload To GitHub Artifacts
         uses: actions/upload-artifact@v3
         with:
-          path: ./packages/*.deb
+          name: 'Package'
+          path: ${{ github.workspace }}/packages/*.deb
