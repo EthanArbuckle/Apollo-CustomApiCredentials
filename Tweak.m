@@ -1,19 +1,37 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import "RedditAPICredentialViewController.h"
 
-static NSString * const kRedditClientID = @"CLIENT_ID_GOES_HERE";
 static NSString * const kImgurClientID = @"IMGUR_CLIENT_ID_GOES_HERE";
 static NSString * const kImgurRapidAPIKey = @"RAPID_API_KEY_GOES_HERE";
 
 
 __attribute__ ((constructor)) static void init(void) {
 	
+	if (![[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"]) {
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+
+			UIWindow *mainWindow = ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).windows.firstObject;
+
+			UIWindow *window = [[UIWindow alloc] initWithFrame:mainWindow.frame];
+			[window makeKeyAndVisible];
+			[mainWindow addSubview:window];
+			
+			UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:[[UIViewController alloc] init]];
+			[window addSubview:navController.view];
+			
+			RedditAPICredentialViewController *viewController = [[RedditAPICredentialViewController alloc] init];
+	       	// viewController.modalPresentationStyle = UIModalPresentationFullScreen;
+			[navController presentViewController:viewController animated:YES completion:nil];
+		});
+	}
+
 	Class _RDKOAuthCredential = objc_getClass("RDKOAuthCredential");
 	if (_RDKOAuthCredential) {
 
 		Method clientIdMethod = class_getInstanceMethod(_RDKOAuthCredential, sel_registerName("clientIdentifier"));
 		IMP replacementImp = imp_implementationWithBlock(^NSString *(id _self) {
-			return kRedditClientID;
+			return [[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"];
 		});
 		method_setImplementation(clientIdMethod, replacementImp);
 	}
