@@ -20,6 +20,5 @@ sign out of all accounts in Apollo before installing
        static NSString * const kRedditClientID = @"CLIENT_ID_GOES_HERE";
 
 6. build and install
-
-
+zishan forked this repository and making changes however he likes, this is just an attmpt to learn git and github
 For now Apollo will still use the original API creds for other services (like imgur), but i'll update this to support replacing those as well
