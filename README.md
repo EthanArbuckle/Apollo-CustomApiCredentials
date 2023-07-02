@@ -1,17 +1,17 @@
 ## Use your own reddit API credentials in Apollo
 
 
-### Creating an API credential:
+### Creating an API credential for use with Apollo
 
-sign out of all accounts in Apollo before installing
+First, sign out of all accounts in Apollo before installing
 
-1. Sign into your reddit account (on desktop) and go here: https://reddit.com/prefs/apps
+1. Sign into your reddit account (on desktop, not mobile) and go here: https://reddit.com/prefs/apps
 2. Click the `are you a developer? create an app...` button
 3. Fill in the fields
 	* name: Use whatever
 	* Choose `Installed App`
-	* description: bs
-	* about url: bs
+	* description: bs (fill out with random stuff)
+	* about url: bs (fill out with random stuff, again)
 	* redirect uri: `apollo://reddit-oauth`
 4. `create app`
 
