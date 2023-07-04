@@ -6,6 +6,9 @@
     [super viewDidLoad];
 
     self.view.backgroundColor = [UIColor lightGrayColor];
+    UIButton *reloadButton = [UIButton systemButtonWithImage:[UIImage systemImageNamed:@"arrow.clockwise" ] target:self action:@selector(reloadWebView)];
+    reloadButton.frame = CGRectMake(10, 25, 30, 30);
+    [self.view addSubview:reloadButton];
 
     // If an account is already signed in to reddit, attempting to navigate to the developer apps page will redirect to the mobile homepage.
     // Work around this by signing out of reddit
@@ -27,20 +30,37 @@
     webviewFrame.origin.y = 80;
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
-    WKWebView *webView = [[WKWebView alloc] initWithFrame:webviewFrame configuration:config];
-    webView.navigationDelegate = self;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.reddit.com/prefs/apps"]]];
-    [self.view addSubview:webView];
+    self.webView = [[WKWebView alloc] initWithFrame:webviewFrame configuration:config];
+    self.webView.navigationDelegate = self;
+    [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.reddit.com/prefs/apps"]]];
+    [self.view addSubview:self.webView];
+}
+
+- (void)reloadWebView {
+    self.lastLoadedURL = nil;
+    [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://www.reddit.com/prefs/apps"]]];
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(null_unspecified WKNavigation *)navigation {
 
-    if (![webView.URL.absoluteString containsString:@"https://www.reddit.com/prefs/apps"]) {
-        return;
+    // Reddit's login page sometimes fails to redirect. Attempt to detect this and recover
+    NSString *redditRedirectURL = @"https://www.reddit.com/login/?dest=https%3A%2F%2Fwww.reddit.com%2Fprefs%2Fapps";
+    if (self.lastLoadedURL && [self.lastLoadedURL isEqualToString:redditRedirectURL] && [webView.URL.absoluteString isEqualToString:redditRedirectURL]) {
+
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (![webView.URL.absoluteString isEqualToString:@"https://www.reddit.com/prefs/apps"]) {
+                // Redirect probably failed. Perform a new request
+                [self reloadWebView];
+            }
+        });
     }
 
-    // Inspect contents of the developer apps page -- looking for a client id
-    [self pageDidUpdate:webView];
+    if ([webView.URL.absoluteString isEqualToString:@"https://www.reddit.com/prefs/apps"]) {
+        // Inspect contents of the developer apps page -- looking for a client id
+        [self pageDidUpdate:webView];
+    }
+
+    self.lastLoadedURL = webView.URL.absoluteString;
 }
 
 -(void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
@@ -63,7 +83,6 @@
 }
 
 - (void)pageDidUpdate:(WKWebView *)webView {
-
     // Grab the page's source
     [webView evaluateJavaScript:@"document.body.innerHTML" completionHandler:^(id _Nullable value, NSError * _Nullable error) {
         if (error) {
@@ -86,15 +105,16 @@
             [[NSUserDefaults standardUserDefaults] setValue:clientID forKey:@"ApolloRedditAPIClientID"];
             self.statusLabel.text = [NSString stringWithFormat:@"client id: %@", clientID];
 
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 
                 if (self.presentingViewController.view.superview) {
                     UIWindow *containingWindow = (UIWindow *)self.presentingViewController.view.superview;
-                    [self dismissViewControllerAnimated:YES completion:nil];
                     [containingWindow setHidden:YES];
                 }
+
+                [self dismissViewControllerAnimated:YES completion:nil];
             });
-    
+
         }
         else {
 
