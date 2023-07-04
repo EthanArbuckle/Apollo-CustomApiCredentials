@@ -132,7 +132,7 @@
                                             Array.from(document.getElementsByName('description')).slice(-1)[0].value = \"i'm a fun reddit app\"; \
                                             Array.from(document.getElementsByName('about_url')).slice(-1)[0].value = \"https://google.com\"; \
                                             document.getElementById('redirect_uri').value = \"apollo://reddit-oauth\"; \
-                                            Array.from(document.getElementsByName('name')).slice(-1)[0].value = \"Some app %@\";", [[NSProcessInfo processInfo] globallyUniqueString]];
+                                            Array.from(document.getElementsByName('name')).slice(-1)[0].value = \"Some app %@\";", RANDSTRING];
                 [webView evaluateJavaScript:prefillFormJS completionHandler:nil];
             }];
 

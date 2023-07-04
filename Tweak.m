@@ -55,6 +55,7 @@ __attribute__ ((constructor)) static void init(void) {
 		});
 	}
 
+	// Reddit API Credentials
 	Class _RDKOAuthCredential = objc_getClass("RDKOAuthCredential");
 	if (_RDKOAuthCredential) {
 
@@ -62,9 +63,29 @@ __attribute__ ((constructor)) static void init(void) {
 		IMP replacementImp = imp_implementationWithBlock(^NSString *(id _self) {
 			return [[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"];
 		});
+	
 		method_setImplementation(clientIdMethod, replacementImp);
 	}
 
+	// Randomize User-Agent
+	Class _RDKClient = objc_getClass("RDKClient");
+	if (_RDKClient) {
+
+		Method userAgentMethod = class_getInstanceMethod(_RDKClient, sel_registerName("userAgent"));
+		IMP userAgentReplacementImp = imp_implementationWithBlock(^NSString *(id _self) {
+			static dispatch_once_t once;
+			static NSString *newUserAgent;
+			dispatch_once(&once, ^{
+				newUserAgent = [NSString stringWithFormat:@"iOS: com.%@.%@ v%d.%d.%d (by /u/%@)", RANDSTRING, RANDSTRING, RANDINT, RANDINT, RANDINT, RANDSTRING];
+			});
+
+			return newUserAgent;
+		});
+	
+		method_setImplementation(userAgentMethod, userAgentReplacementImp);
+	}
+
+	// Imgur API credentials
 	Class _NSURLSessionConfiguration = objc_getClass("NSURLSessionConfiguration");
 	Method setHeadersMethod = class_getInstanceMethod(_NSURLSessionConfiguration, sel_registerName("setHTTPAdditionalHeaders:"));
 	IMP originalSetHeadersImp = method_getImplementation(setHeadersMethod);
@@ -84,7 +105,7 @@ __attribute__ ((constructor)) static void init(void) {
 			headers = newHeaders;
 		}
 
-		((void (*)(id, SEL, id))originalSetHeadersImp)(_self, NSSelectorFromString(@"setHTTPAdditionalHeaders:"), headers);
+		((void (*)(id, SEL, id))originalSetHeadersImp)(_self, sel_registerName("setHTTPAdditionalHeaders:"), headers);
 	});
 
 	method_setImplementation(setHeadersMethod, replacementSetHeadersImp);
