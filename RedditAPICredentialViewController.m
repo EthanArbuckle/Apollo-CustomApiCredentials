@@ -55,7 +55,8 @@
         });
     }
 
-    if ([webView.URL.absoluteString isEqualToString:@"https://www.reddit.com/prefs/apps"]) {
+    // Cannot use an equality check here because iOS may add a cache buster to the url (?cache-bust=1688623485410)
+    if ([webView.URL.absoluteString containsString:@"https://www.reddit.com/prefs/apps"]) {
         // Inspect contents of the developer apps page -- looking for a client id
         [self pageDidUpdate:webView];
     }
