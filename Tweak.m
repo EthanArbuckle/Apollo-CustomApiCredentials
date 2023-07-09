@@ -4,7 +4,6 @@
 #import "RedditAPICredentialViewController.h"
 
 static NSString * const kImgurClientID = @"IMGUR_CLIENT_ID_GOES_HERE";
-static NSString * const kImgurRapidAPIKey = @"RAPID_API_KEY_GOES_HERE";
 
 static NSDictionary *stripGroupAccessAttr(CFDictionaryRef attributes) {
     NSMutableDictionary *newAttributes = [[NSMutableDictionary alloc] initWithDictionary:(__bridge id)attributes];
@@ -63,7 +62,7 @@ __attribute__ ((constructor)) static void init(void) {
 		IMP replacementImp = imp_implementationWithBlock(^NSString *(id _self) {
 			return [[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"];
 		});
-	
+
 		method_setImplementation(clientIdMethod, replacementImp);
 	}
 
@@ -81,32 +80,43 @@ __attribute__ ((constructor)) static void init(void) {
 
 			return newUserAgent;
 		});
-	
+
 		method_setImplementation(userAgentMethod, userAgentReplacementImp);
 	}
 
 	// Imgur API credentials
-	Class _NSURLSessionConfiguration = objc_getClass("NSURLSessionConfiguration");
-	Method setHeadersMethod = class_getInstanceMethod(_NSURLSessionConfiguration, sel_registerName("setHTTPAdditionalHeaders:"));
-	IMP originalSetHeadersImp = method_getImplementation(setHeadersMethod);
-	IMP replacementSetHeadersImp = imp_implementationWithBlock(^void (id _self, NSDictionary *headers) {
+	Class ___NSCFLocalSessionTask = objc_getClass("__NSCFLocalSessionTask");
+	Method onqueueResumeMethod = class_getInstanceMethod(___NSCFLocalSessionTask, sel_registerName("_onqueue_resume"));
+	IMP originalOnqueueImp = method_getImplementation(onqueueResumeMethod);
+	IMP replacementOnqueueImp = imp_implementationWithBlock(^void (id _self) {
 
-		if (headers && [headers valueForKey:@"Authorization"]) {
-			if ([[headers valueForKey:@"Authorization"] isEqualToString:@"Client-ID 0b596f9aaeef0f4"]) {
-				NSMutableDictionary *newHeaders = [headers mutableCopy];
-				newHeaders[@"Authorization"] = [NSString stringWithFormat:@"Client-ID %@", kImgurClientID];
-				headers = newHeaders;
-			}
+		// Grab the request url
+		NSURLRequest *request =  [_self valueForKey:@"_originalRequest"];
+		NSString *requestURL = request.URL.absoluteString;
+
+		// Drop requests to analytics/apns services
+		if ([requestURL containsString:@"https://apollopushserver.xyz"] || [requestURL containsString:@"telemetrydeck.com"]) {
+			return;
 		}
 
-		if (headers && [headers valueForKey:@"X-RapidAPI-Key"]) {
-			NSMutableDictionary *newHeaders = [headers mutableCopy];
-			newHeaders[@"X-RapidAPI-Key"] = kImgurRapidAPIKey;
-			headers = newHeaders;
+		// Catch requests to Apollo's Imgur proxy and Rapidshare. The URLs will be replaced with the real Imgur API
+		if ([requestURL containsString:@"https://apollogur.download/api/"] || [requestURL containsString:@"https://imgur-apiv3.p.rapidapi.com"]) {
+
+			NSMutableURLRequest *mutableRequest = [request mutableCopy];
+
+			// Replace proxy urls with the real imgur api
+			NSString *newURLString = [request.URL.absoluteString stringByReplacingOccurrencesOfString:@"https://apollogur.download/api/" withString:@"https://api.imgur.com/3/"];
+			newURLString = [request.URL.absoluteString stringByReplacingOccurrencesOfString:@"https://imgur-apiv3.p.rapidapi.com/" withString:@"https://api.imgur.com/"];
+			mutableRequest.URL = [NSURL URLWithString:newURLString];
+
+			// Insert the api credential and update the request on this session task
+			[mutableRequest setValue:[NSString stringWithFormat:@"Client-ID %@", kImgurClientID] forHTTPHeaderField:@"Authorization"];
+			[_self setValue:mutableRequest forKey:@"_originalRequest"];
+			[_self setValue:mutableRequest forKey:@"_currentRequest"];
 		}
 
-		((void (*)(id, SEL, id))originalSetHeadersImp)(_self, sel_registerName("setHTTPAdditionalHeaders:"), headers);
+		((void (*)(id, SEL))originalOnqueueImp)(_self, sel_registerName("_onqueue_resume"));
 	});
 
-	method_setImplementation(setHeadersMethod, replacementSetHeadersImp);
+	method_setImplementation(onqueueResumeMethod, replacementOnqueueImp);
 }
