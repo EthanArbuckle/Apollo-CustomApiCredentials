@@ -105,8 +105,8 @@ __attribute__ ((constructor)) static void init(void) {
 			NSMutableURLRequest *mutableRequest = [request mutableCopy];
 
 			// Replace proxy urls with the real imgur api
-			NSString *newURLString = [request.URL.absoluteString stringByReplacingOccurrencesOfString:@"https://apollogur.download/api/" withString:@"https://api.imgur.com/3/"];
-			newURLString = [request.URL.absoluteString stringByReplacingOccurrencesOfString:@"https://imgur-apiv3.p.rapidapi.com/" withString:@"https://api.imgur.com/"];
+			NSString *newURLString = [requestURL stringByReplacingOccurrencesOfString:@"https://apollogur.download/api/" withString:@"https://api.imgur.com/3/"];
+			newURLString = [newURLString stringByReplacingOccurrencesOfString:@"https://imgur-apiv3.p.rapidapi.com/" withString:@"https://api.imgur.com/"];
 			mutableRequest.URL = [NSURL URLWithString:newURLString];
 
 			// Insert the api credential and update the request on this session task
