@@ -37,6 +37,9 @@ __attribute__ ((constructor)) static void init(void) {
 		{"SecItemUpdate", SecItemUpdate_replacement, (void *)&SecItemUpdate_orig}
 	}, 3);
 
+ 	// Suppress wallpaper popup
+	[[NSUserDefaults standardUserDefaults] setObject:[NSDate dateWithTimeIntervalSinceNow:60*60*24*90] forKey:@"WallpaperPromptMostRecent2"];
+ 
 	if (![[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"]) {
 		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 
