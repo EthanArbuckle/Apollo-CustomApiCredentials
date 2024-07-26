@@ -39,22 +39,31 @@ __attribute__ ((constructor)) static void init(void) {
 
  	// Suppress wallpaper popup
 	[[NSUserDefaults standardUserDefaults] setObject:[NSDate dateWithTimeIntervalSinceNow:60*60*24*90] forKey:@"WallpaperPromptMostRecent2"];
- 
-	if (![[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"]) {
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 
-			UIWindow *mainWindow = ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).windows.firstObject;
+	BOOL customClientIdSet = [[NSUserDefaults standardUserDefaults] valueForKey:@"ApolloRedditAPIClientID"];
+	if (!customClientIdSet) {
 
-			UIWindow *window = [[UIWindow alloc] initWithFrame:mainWindow.frame];
-			[window makeKeyAndVisible];
-			[mainWindow addSubview:window];
+		// See if a clientId was provided during compilation
+		NSString *clientId = [NSString stringWithUTF8String:APOLLO_REDDIT_API_CLIENT_ID];
+		if (clientId && [clientId length] > 1) {
+			[[NSUserDefaults standardUserDefaults] setValue:clientId forKey:@"ApolloRedditAPIClientID"];
+		}
+		else {
+			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 
-			UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:[[UIViewController alloc] init]];
-			[window addSubview:navController.view];
+				UIWindow *mainWindow = ((UIWindowScene *)UIApplication.sharedApplication.connectedScenes.anyObject).windows.firstObject;
 
-			RedditAPICredentialViewController *viewController = [[RedditAPICredentialViewController alloc] init];
-			[navController presentViewController:viewController animated:YES completion:nil];
-		});
+				UIWindow *window = [[UIWindow alloc] initWithFrame:mainWindow.frame];
+				[window makeKeyAndVisible];
+				[mainWindow addSubview:window];
+
+				UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:[[UIViewController alloc] init]];
+				[window addSubview:navController.view];
+
+				RedditAPICredentialViewController *viewController = [[RedditAPICredentialViewController alloc] init];
+				[navController presentViewController:viewController animated:YES completion:nil];
+			});
+		}
 	}
 
 	// Reddit API Credentials
