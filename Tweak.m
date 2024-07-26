@@ -29,6 +29,16 @@ static OSStatus SecItemUpdate_replacement(CFDictionaryRef query, CFDictionaryRef
 	return ((OSStatus (*)(CFDictionaryRef, CFDictionaryRef))SecItemUpdate_orig)((__bridge CFDictionaryRef)strippedQuery, attributesToUpdate);
 }
 
+static NSString *newUserAgentString(void) {
+	static NSString *newUserAgent;
+	static dispatch_once_t once;
+	dispatch_once(&once, ^{
+		newUserAgent = [NSString stringWithFormat:@"iOS: com.%@.%@ v%d.%d.%d (by /u/%@)", RANDSTRING, RANDSTRING, RANDINT, RANDINT, RANDINT, RANDSTRING];
+	});
+
+	return newUserAgent;
+}
+
 __attribute__ ((constructor)) static void init(void) {
 
 	rebind_symbols((struct rebinding[3]) {
@@ -84,13 +94,7 @@ __attribute__ ((constructor)) static void init(void) {
 
 		Method userAgentMethod = class_getInstanceMethod(_RDKClient, sel_registerName("userAgent"));
 		IMP userAgentReplacementImp = imp_implementationWithBlock(^NSString *(id _self) {
-			static dispatch_once_t once;
-			static NSString *newUserAgent;
-			dispatch_once(&once, ^{
-				newUserAgent = [NSString stringWithFormat:@"iOS: com.%@.%@ v%d.%d.%d (by /u/%@)", RANDSTRING, RANDSTRING, RANDINT, RANDINT, RANDINT, RANDSTRING];
-			});
-
-			return newUserAgent;
+			return newUserAgentString();
 		});
 
 		method_setImplementation(userAgentMethod, userAgentReplacementImp);
@@ -111,10 +115,15 @@ __attribute__ ((constructor)) static void init(void) {
 			return;
 		}
 
+		// Replace the original user agent string with a randomized one
+		NSMutableURLRequest *mutableRequest = [request mutableCopy];
+
+		if ([requestURL containsString:@"reddit.com"]) {
+			[mutableRequest setValue:newUserAgentString() forHTTPHeaderField:@"User-Agent"];
+		}
+
 		// Catch requests to Apollo's Imgur proxy and Rapidshare. The URLs will be replaced with the real Imgur API
 		if ([requestURL containsString:@"https://apollogur.download/api/"] || [requestURL containsString:@"https://imgur-apiv3.p.rapidapi.com"]) {
-
-			NSMutableURLRequest *mutableRequest = [request mutableCopy];
 
 			// Replace proxy urls with the real imgur api
 			NSString *newURLString = [requestURL stringByReplacingOccurrencesOfString:@"https://apollogur.download/api/" withString:@"https://api.imgur.com/3/"];
@@ -123,9 +132,10 @@ __attribute__ ((constructor)) static void init(void) {
 
 			// Insert the api credential and update the request on this session task
 			[mutableRequest setValue:[NSString stringWithFormat:@"Client-ID %@", kImgurClientID] forHTTPHeaderField:@"Authorization"];
-			[_self setValue:mutableRequest forKey:@"_originalRequest"];
-			[_self setValue:mutableRequest forKey:@"_currentRequest"];
 		}
+
+		[_self setValue:mutableRequest forKey:@"_originalRequest"];
+		[_self setValue:mutableRequest forKey:@"_currentRequest"];
 
 		((void (*)(id, SEL))originalOnqueueImp)(_self, sel_registerName("_onqueue_resume"));
 	});
